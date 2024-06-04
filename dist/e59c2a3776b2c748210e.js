@@ -35443,6 +35443,8 @@ var parseGraphData = function parseGraphData(graphData) {
 var width = 500;
 var height = 500;
 var scale = 1.8;
+var maxLinkDistance = 20;
+var minLinkDistance = 5;
 var simulation = d3.forceSimulation().force('link', d3.forceLink().id(function (d) {
   return d.id;
 }).distance(function (d) {
@@ -35528,7 +35530,7 @@ var chart = Object.assign(svg.node(), {
           data.links.push({
             source: selectedNodes[0].id,
             target: selectedNodes[1].id,
-            distance: Math.floor(Math.random() * (20 - 5 + 1)) + 5
+            distance: Math.floor(Math.random() * (maxLinkDistance - minLinkDistance + 1)) + minLinkDistance
           });
           chart.update();
         }
@@ -35640,6 +35642,7 @@ var chart = Object.assign(svg.node(), {
 
     // Define the event handlers for drag behavior
 
+    var linkClickTimeout;
     link = link.data(links, function (d) {
       return [d.source, d.target];
     }).join('line').on('mouseover', function (d, i) {
@@ -35650,12 +35653,34 @@ var chart = Object.assign(svg.node(), {
       d3.select(this).transition().duration(200).attr('stroke-width', 4 * scale);
       simulation.alpha(1).restart().tick();
       ticked();
-    }).on('click', function (d, i) {
+    }).on('dblclick', function (event, i) {
+      clearTimeout(linkClickTimeout);
+      event.stopPropagation();
+      event.preventDefault();
       console.log(i);
       data.links = data.links.filter(function (link) {
         return link.source !== i.source.id || link.target !== i.target.id;
       });
       chart.update();
+    }).on('contextmenu', function (event, obj) {
+      link.classed('path', false);
+      console.log(obj);
+      event.stopPropagation();
+      event.preventDefault();
+      data.links[obj.index].distance = data.links[obj.index].distance > minLinkDistance ? data.links[obj.index].distance - 1 : maxLinkDistance;
+      chart.update();
+    }).on('click', function (event, obj) {
+      clearTimeout(linkClickTimeout);
+      linkClickTimeout = setTimeout(function () {
+        link.classed('path', false);
+        console.log(obj);
+
+        // event.stopPropagation()
+        // event.preventDefault()
+
+        data.links[obj.index].distance = data.links[obj.index].distance < maxLinkDistance ? data.links[obj.index].distance + 1 : minLinkDistance;
+        chart.update();
+      }, 200);
     });
     link.transition().duration(300).attr('stroke', function (d) {
       return d.color === undefined ? colors.gray[900] : d.color;
@@ -35730,4 +35755,4 @@ test();
 
 /******/ })()
 ;
-//# sourceMappingURL=11136efd2f92c15dbeed.js.map
+//# sourceMappingURL=e59c2a3776b2c748210e.js.map

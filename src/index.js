@@ -164,6 +164,9 @@ const width = 500
 const height = 500
 let scale = 1.8
 
+const maxLinkDistance = 20
+const minLinkDistance = 5
+
 const simulation = d3
 	.forceSimulation()
 	.force(
@@ -292,7 +295,10 @@ const chart = Object.assign(svg.node(), {
 						data.links.push({
 							source: selectedNodes[0].id,
 							target: selectedNodes[1].id,
-							distance: Math.floor(Math.random() * (20 - 5 + 1)) + 5,
+							distance:
+								Math.floor(
+									Math.random() * (maxLinkDistance - minLinkDistance + 1)
+								) + minLinkDistance,
 						})
 						chart.update()
 					}
@@ -428,6 +434,8 @@ const chart = Object.assign(svg.node(), {
 
 		// Define the event handlers for drag behavior
 
+		let linkClickTimeout
+
 		link = link
 			.data(links, (d) => [d.source, d.target])
 			.join('line')
@@ -447,12 +455,51 @@ const chart = Object.assign(svg.node(), {
 				simulation.alpha(1).restart().tick()
 				ticked()
 			})
-			.on('click', function (d, i) {
+			.on('dblclick', function (event, i) {
+				clearTimeout(linkClickTimeout)
+
+				event.stopPropagation()
+				event.preventDefault()
+
 				console.log(i)
 				data.links = data.links.filter(
 					(link) => link.source !== i.source.id || link.target !== i.target.id
 				)
 				chart.update()
+			})
+			.on('contextmenu', function (event, obj) {
+				link.classed('path', false)
+
+				console.log(obj)
+
+				event.stopPropagation()
+				event.preventDefault()
+
+				data.links[obj.index].distance =
+					data.links[obj.index].distance > minLinkDistance
+						? data.links[obj.index].distance - 1
+						: maxLinkDistance
+
+				chart.update()
+			})
+			.on('click', function (event, obj) {
+				clearTimeout(linkClickTimeout)
+
+				linkClickTimeout = setTimeout(() => {
+					link.classed('path', false)
+
+					console.log(obj)
+
+					// event.stopPropagation()
+					// event.preventDefault()
+
+					data.links[obj.index].distance =
+						data.links[obj.index].distance < maxLinkDistance
+							? data.links[obj.index].distance + 1
+							: minLinkDistance
+
+					chart.update()
+				}, 200)
 			})
 
 		link
